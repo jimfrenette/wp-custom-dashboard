@@ -35,6 +35,7 @@ class wpcd_dashboard {
 	 */
 	function __construct() {
     	add_action('admin_menu', array( &$this,'wpcd_register_menu') );
+		add_action('wp_before_admin_bar_render', array( &$this,'wpcd_admin_bar_menu') );
 	    add_action('load-index.php', array( &$this,'wpcd_redirect_dashboard') );
 	} // end constructor
 
@@ -76,6 +77,18 @@ class wpcd_dashboard {
 			remove_menu_page( 'users.php' );           // Users
 			remove_menu_page( 'tools.php' );           // Tools
 			remove_menu_page( 'options-general.php' ); // Settings
+		}
+	}
+
+	/**
+	 * Modify the $wp_admin_bar object before it is used to render the Toolbar to the screen.
+	 */
+	function wpcd_admin_bar_menu() {
+		global $wp_admin_bar;
+		$wp_admin_bar->remove_node( 'wp-logo' );
+
+		if (! current_user_can( 'manage_options' ) ) { // not admin role
+			$wp_admin_bar->remove_menu( 'comments' );
 		}
 	}
 
