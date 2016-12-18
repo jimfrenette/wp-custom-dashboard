@@ -56,9 +56,21 @@ class wpcd_dashboard {
 
 	}
 
-
 	function wpcd_register_menu() {
-		add_dashboard_page( 'Dashboard', 'Dashboard', 'read', 'dashboard', array( &$this,'wpcd_create_dashboard') );
+		add_dashboard_page( '', '', 'read', 'dashboard', array( &$this,'wpcd_create_dashboard') );
+
+		/**
+		* This would not prevent a user from accessing these screens directly.
+		* Removing a menu does not replace the need to filter a user's permissions as appropriate
+		*/
+		if (! current_user_can( 'manage_options' ) ) { // not admin role
+			remove_menu_page( 'edit-comments.php' );   // Comments
+			remove_menu_page( 'themes.php' );          // Appearance
+			remove_menu_page( 'plugins.php' );         // Plugins
+			remove_menu_page( 'users.php' );           // Users
+			remove_menu_page( 'tools.php' );           // Tools
+			remove_menu_page( 'options-general.php' ); // Settings
+		}
 	}
 
 	function wpcd_create_dashboard() {
