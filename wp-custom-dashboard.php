@@ -42,7 +42,10 @@ class wpcd_dashboard {
 
 		if( is_admin() ) {
 
-			if (! current_user_can( 'manage_options' ) ) { // not admin role
+			/**
+			 * Only redirect to the custom dashboard if the user cannot manage options and is threfore not an administrator.
+			 */
+			if (! current_user_can( 'manage_options' ) ) {
 
 				$screen = get_current_screen();
 
@@ -56,6 +59,9 @@ class wpcd_dashboard {
 
 	}
 
+	/**
+	 * Register the dashboard page in the WordPress menu
+	 */
 	function wpcd_register_menu() {
 		add_dashboard_page( '', '', 'read', 'dashboard', array( &$this,'wpcd_create_dashboard') );
 
