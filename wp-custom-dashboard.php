@@ -26,6 +26,13 @@ if ( !defined('WPCD_PLUGIN_URL') ) {
 
 class wpcd_dashboard {
 
+	/**
+	 * Access
+	 */
+	private static $userCan = 'manage_options'; // admin
+	private static $denyPage = array('edit-comments.php', 'themes.php', 'plugins.php', 'users.php', 'tools.php', 'options-general.php');
+
+
 	/*--------------------------------------------*
 	 * Constructor
 	 *--------------------------------------------*/
@@ -34,30 +41,28 @@ class wpcd_dashboard {
 	 * Initializes the plugin
 	 */
 	function __construct() {
-    	add_action('admin_menu', array( &$this,'wpcd_register_menu') );
-		add_action('wp_before_admin_bar_render', array( &$this,'wpcd_admin_bar_menu') );
+		// when current page is load-index.php, call wpcd_redirect_dashboard
 	    add_action('load-index.php', array( &$this,'wpcd_redirect_dashboard') );
-	} // end constructor
+
+		// modify the admin toolbar
+		add_action('wp_before_admin_bar_render', array( &$this,'wpcd_admin_bar_menu') );
+
+		// modify menu and redirect menu target page
+		add_action('admin_menu', array( &$this,'wpcd_register_menu') );
+	}
 
 	function wpcd_redirect_dashboard() {
 
-		if( is_admin() ) {
+		if( is_admin() ) { // dashboard
 
-			/**
-			 * Only redirect to the custom dashboard if the user cannot manage options and is threfore not an administrator.
-			 */
-			if (! current_user_can( 'manage_options' ) ) {
-
+			if (! current_user_can( self::$userCan ) ) {
 				$screen = get_current_screen();
 
 				if( $screen->base == 'dashboard' ) {
 					wp_redirect( admin_url( 'index.php?page=dashboard' ) );
 				}
-
 			}
-
 		}
-
 	}
 
 	/**
@@ -66,17 +71,28 @@ class wpcd_dashboard {
 	function wpcd_register_menu() {
 		add_dashboard_page( '', '', 'read', 'dashboard', array( &$this,'wpcd_create_dashboard') );
 
-		/**
-		* This would not prevent a user from accessing these screens directly.
-		* Removing a menu does not replace the need to filter a user's permissions as appropriate
-		*/
-		if (! current_user_can( 'manage_options' ) ) { // not admin role
-			remove_menu_page( 'edit-comments.php' );   // Comments
-			remove_menu_page( 'themes.php' );          // Appearance
-			remove_menu_page( 'plugins.php' );         // Plugins
-			remove_menu_page( 'users.php' );           // Users
-			remove_menu_page( 'tools.php' );           // Tools
-			remove_menu_page( 'options-general.php' ); // Settings
+		if( is_admin() ) {
+
+			if (! current_user_can( self::$userCan ) ) { // not admin role
+
+				global $pagenow;
+
+				foreach (self::$denyPage as $page) {
+
+					/**
+					* This would not prevent a user from accessing these screens directly.
+					* Removing a menu does not replace the need to filter a user's permissions as appropriate
+					*/
+					remove_menu_page( $page );
+
+					/**
+					 * Redirect the user trying to access a denied page
+					 */
+					if ($pagenow == $page) {
+						wp_redirect( admin_url( 'index.php?page=dashboard' ) );
+					}
+				}
+			}
 		}
 	}
 
@@ -84,11 +100,14 @@ class wpcd_dashboard {
 	 * Modify the $wp_admin_bar object before it is used to render the Toolbar to the screen.
 	 */
 	function wpcd_admin_bar_menu() {
-		global $wp_admin_bar;
-		$wp_admin_bar->remove_node( 'wp-logo' );
+		if( is_admin() ) {
 
-		if (! current_user_can( 'manage_options' ) ) { // not admin role
-			$wp_admin_bar->remove_menu( 'comments' );
+			global $wp_admin_bar;
+			$wp_admin_bar->remove_node( 'wp-logo' );
+
+			if (! current_user_can( self::$userCan ) ) {
+				$wp_admin_bar->remove_menu( 'comments' );
+			}
 		}
 	}
 
