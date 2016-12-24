@@ -1,121 +1,175 @@
 <?php
-/*
-Plugin Name: WP Custom Dashboard
-Plugin URL: http://jimfrenette.com/wordpress Description: Simple plugin to redirect to a custom dashboard.
-Version: 1.0
-Author: Jim Frenette
-Author URI: http://jimfrenette.com Contributors: jimfrenette
-Text Domain: wp-custom-dashboard
-*/
+/**
+ * Plugin Name: WP Custom Dashboard
+ * Plugin URL: http://jimfrenette.com/wordpress
+ * Description: WordPress plugin stub to customize the dashboard for users without administrator access.
+ * Version: 1.0
+ * Author: Jim Frenette
+ * Author URI: http://jimfrenette.com
+ * Text Domain: wp-custom-dashboard
+ * License: GNU General Public License v2.0 (or later)
+ * License URI: http://www.opensource.org/licenses/gpl-license.php
+ */
 
-/*
-|--------------------------------------------------------------------------
-| CONSTANTS
-|--------------------------------------------------------------------------
-*/
-// plugin folder url
-if ( !defined('WPCD_PLUGIN_URL') ) {
-    define('WPCD_PLUGIN_URL', plugin_dir_url( __FILE__ ));
+if ( ! defined( 'ABSPATH' ) ) {
+	exit; // Exit if accessed directly.
 }
 
-/*
-|--------------------------------------------------------------------------
-| MAIN CLASS
-|--------------------------------------------------------------------------
-*/
+if ( ! class_exists( 'WP_CustomDashboard' ) ) :
 
-class wpcd_dashboard {
-
-	/**
-	 * Access
-	 */
-	private static $userCan = 'manage_options'; // admin
-	private static $denyPage = array('edit-comments.php', 'themes.php', 'plugins.php', 'users.php', 'tools.php', 'options-general.php');
-
-
-	/*--------------------------------------------*
-	 * Constructor
-	 *--------------------------------------------*/
+/**
+ * Main WP_CustomDashboard Class.
+ *
+ * @class WP_CustomDashboard
+ * @version	1.0
+ */
+final class WP_CustomDashboard {
 
 	/**
-	 * Initializes the plugin
+	 * The single instance of the class.
+	 *
+	 * @var WP_CustomDashboard
+	 * @since 1.0
 	 */
-	function __construct() {
-		// when current page is load-index.php, call wpcd_redirect_dashboard
-	    add_action('load-index.php', array( &$this,'wpcd_redirect_dashboard') );
+	protected static $_instance = null;
 
-		// modify the admin toolbar
-		add_action('wp_before_admin_bar_render', array( &$this,'wpcd_admin_bar_menu') );
-
-		// modify menu and redirect menu target page
-		add_action('admin_menu', array( &$this,'wpcd_register_menu') );
+	/**
+	 * Main WP_CustomDashboard Instance.
+	 *
+	 * Ensures only one instance of WP_CustomDashboard is loaded or can be loaded.
+	 *
+	 * @since 1.0
+	 * @static
+	 * @see WPCD()
+	 * @return WP_CustomDashboard - Main instance.
+	 */
+	public static function instance() {
+		if ( is_null( self::$_instance ) ) {
+			self::$_instance = new self();
+		}
+		return self::$_instance;
 	}
 
-	function wpcd_redirect_dashboard() {
+	/**
+	 * Cloning is forbidden.
+	 * @since 1.0
+	 */
+	public function __clone() {
+		_doing_it_wrong( __FUNCTION__, __( 'Cheatin&#8217; huh?', 'wp-custom-dashboard' ), '1.0' );
+	}
 
-		if( is_admin() ) { // dashboard
+	/**
+	 * Unserializing instances of this class is forbidden.
+	 * @since 1.0
+	 */
+	public function __wakeup() {
+		_doing_it_wrong( __FUNCTION__, __( 'Cheatin&#8217; huh?', 'wp-custom-dashboard' ), '1.0' );
+	}
 
-			if (! current_user_can( self::$userCan ) ) {
-				$screen = get_current_screen();
+	/**
+	 * WP_CustomDashboard Constructor.
+	 */
+	public function __construct() {
+		$this->define_constants();
+		$this->includes();
+		$this->init_hooks();
 
-				if( $screen->base == 'dashboard' ) {
-					wp_redirect( admin_url( 'index.php?page=dashboard' ) );
-				}
-			}
+		do_action( 'wp-custom-dashboard_loaded' );
+	}
+
+	/**
+	 * Hook into actions and filters.
+	 * @since  1.0
+	 */
+	private function init_hooks() {
+		/**
+		 * DEV NOTES
+		 * call functions on register_activation_hook event
+		 * for DB Setup, etc.
+		 *
+		 * call functions on register_deactivation_hook event
+		 * for cleanup of DB, etc.
+		 */
+		// register_activation_hook( __FILE__, array( 'WPCD_CustomDashboard', 'plugin_activation' ) );
+		// register_deactivation_hook( __FILE__, array( 'WPCD_CustomDashboard', 'plugin_deactivation' ) );
+	}
+
+	/**
+	 * Define WPCD Constants.
+	 */
+	private function define_constants() {
+		$this->define( 'WPCD_PLUGIN_FILE', __FILE__ );
+		$this->define( 'WPCD_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
+	}
+
+	/**
+	 * Define constant if not already set.
+	 *
+	 * @param  string $name
+	 * @param  string|bool $value
+	 */
+	private function define( $name, $value ) {
+		if ( ! defined( $name ) ) {
+			define( $name, $value );
 		}
 	}
 
 	/**
-	 * Register the dashboard page in the WordPress menu
+	 * What type of request is this?
+	 *
+	 * @param  string $type admin, ajax, cron or frontend.
+	 * @return bool
 	 */
-	function wpcd_register_menu() {
-		add_dashboard_page( '', '', 'read', 'dashboard', array( &$this,'wpcd_create_dashboard') );
-
-		if( is_admin() ) {
-
-			if (! current_user_can( self::$userCan ) ) { // not admin role
-
-				global $pagenow;
-
-				foreach (self::$denyPage as $page) {
-
-					/**
-					* This would not prevent a user from accessing these screens directly.
-					* Removing a menu does not replace the need to filter a user's permissions as appropriate
-					*/
-					remove_menu_page( $page );
-
-					/**
-					 * Redirect the user trying to access a denied page
-					 */
-					if ($pagenow == $page) {
-						wp_redirect( admin_url( 'index.php?page=dashboard' ) );
-					}
-				}
-			}
+	private function is_request( $type ) {
+		switch ( $type ) {
+			case 'admin' :
+				return is_admin();
+			case 'ajax' :
+				return defined( 'DOING_AJAX' );
+			case 'cron' :
+				return defined( 'DOING_CRON' );
+			case 'frontend' :
+				return ( ! is_admin() || defined( 'DOING_AJAX' ) ) && ! defined( 'DOING_CRON' );
 		}
 	}
 
 	/**
-	 * Modify the $wp_admin_bar object before it is used to render the Toolbar to the screen.
+	 * Include required core files used in admin and on the frontend.
 	 */
-	function wpcd_admin_bar_menu() {
-		if( is_admin() ) {
+	public function includes() {
+		//TODO
 
-			global $wp_admin_bar;
-			$wp_admin_bar->remove_node( 'wp-logo' );
+		if ( $this->is_request( 'admin' ) ) {
+			include_once( 'includes/admin/class-wpcd-admin.php' );
+		}
 
-			if (! current_user_can( self::$userCan ) ) {
-				$wp_admin_bar->remove_menu( 'comments' );
-			}
+		if ( $this->is_request( 'frontend' ) ) {
+			$this->frontend_includes();
 		}
 	}
 
-	function wpcd_create_dashboard() {
-		include_once( 'dashboard.php'  );
+	/**
+	 * Include required frontend files.
+	 */
+	public function frontend_includes() {
+		//TODO
 	}
 
 }
 
-// instantiate plugin's class
-$GLOBALS['dashboard'] = new wpcd_dashboard();
+endif;
+
+/**
+ * Main instance of WP_CustomDashboard.
+ *
+ * Returns the main instance of WPCD to prevent the need to use globals.
+ *
+ * @since  1.0
+ * @return WP_CustomDashboard
+ */
+function WPCD() {
+	return WP_CustomDashboard::instance();
+}
+
+// Global for backwards compatibility.
+$GLOBALS['wp-custom-dashboard'] = WPCD();
