@@ -100,6 +100,7 @@ final class WP_CustomDashboard {
 	private function define_constants() {
 		$this->define( 'WPCD_PLUGIN_FILE', __FILE__ );
 		$this->define( 'WPCD_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
+		$this->define( 'WPCD_PLUGIN_PATH', plugin_dir_path( __FILE__ ) );
 	}
 
 	/**

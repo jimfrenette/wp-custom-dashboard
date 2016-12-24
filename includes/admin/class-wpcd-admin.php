@@ -25,9 +25,9 @@ class WPCD_Admin {
 	 * Constructor.
 	 */
 	public function __construct() {
-        add_action( 'admin_menu', array( $this, 'remove_menus' ) );
+        add_action( 'admin_menu', array( $this, 'admin_menu' ) );
 		add_action( 'init', array( $this, 'includes' ) );
-        add_action( 'wp_before_admin_bar_render', array( $this, 'mod_admin_bar' ) );
+        add_action( 'wp_before_admin_bar_render', array( $this, 'admin_bar' ) );
         add_action( 'current_screen', array( $this, 'conditional_includes' ) );
 	}
 
@@ -63,9 +63,9 @@ class WPCD_Admin {
 	}
 
 	/**
-	 * Remove admin menus and page access.
+	 * admin menus and page access.
 	 */
-	public function remove_menus() {
+	public function admin_menu() {
         if (! current_user_can( self::$user_can ) ) {
 
             global $pagenow;
@@ -86,14 +86,18 @@ class WPCD_Admin {
                 if ($pagenow == $page) {
                     wp_redirect( admin_url( 'index.php' ) );
                 }
+
             }
         }
+
+		add_menu_page( 'Custom Menu Page', 'Custom Menu Page', self::$user_can, 'wp-custom-dashboard-admin', array( $this, 'menu_page' ), 'dashicons-palmtree', 6 );
+
 	}
 
 	/**
 	 * Modify the $wp_admin_bar object before it is used to render the Toolbar to the screen.
 	 */
-	function mod_admin_bar() {
+	public function admin_bar() {
 
 		global $wp_admin_bar;
 
@@ -103,6 +107,12 @@ class WPCD_Admin {
 			$wp_admin_bar->remove_menu( 'comments' );
 		}
 	}
+
+	public function menu_page() {
+		// Echo the html here...
+
+		include( WPCD_PLUGIN_PATH . 'includes/admin/menu-page.php' );
+    }
 
 }
 
