@@ -1,0 +1,1 @@
+<span id="footer-thankyou">Custom Dashboard Footer Text<span>

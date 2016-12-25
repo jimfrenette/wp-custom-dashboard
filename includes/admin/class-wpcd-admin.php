@@ -29,6 +29,7 @@ class WPCD_Admin {
 		add_action( 'init', array( $this, 'includes' ) );
         add_action( 'wp_before_admin_bar_render', array( $this, 'admin_bar' ) );
         add_action( 'current_screen', array( $this, 'conditional_includes' ) );
+		add_filter( 'admin_footer_text', array( $this, 'admin_footer' ) );
 	}
 
 	/**
@@ -113,6 +114,13 @@ class WPCD_Admin {
 
 		include( WPCD_PLUGIN_PATH . 'includes/admin/menu-page.php' );
     }
+
+	public function admin_footer() {
+		// Echo the html here...
+
+		include( WPCD_PLUGIN_PATH . 'includes/admin/footer.php' );
+    }
+
 
 }
 
